@@ -11,6 +11,25 @@ import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '../../../lib/fi
 
 export const runtime = 'nodejs';
 
+type HandoffStage =
+  | 'initialize-firebase-admin'
+  | 'verify-id-token'
+  | 'load-user'
+  | 'load-membership-profile'
+  | 'create-session-cookie';
+
+function getErrorDetails(error: unknown) {
+  if (typeof error !== 'object' || error === null) {
+    return { message: String(error) };
+  }
+
+  const details: { name?: string; code?: string; message?: string } = {};
+  if ('name' in error && typeof error.name === 'string') details.name = error.name;
+  if ('code' in error && typeof error.code === 'string') details.code = error.code;
+  if ('message' in error && typeof error.message === 'string') details.message = error.message;
+  return details;
+}
+
 function getFailureRedirect(reason: string) {
   const loginUrl = getMembershipLoginUrl();
   loginUrl.searchParams.set('authError', reason);
@@ -33,12 +52,16 @@ export async function POST(request: NextRequest) {
     return new NextResponse('Invalid ID token', { status: 400 });
   }
 
+  let stage: HandoffStage = 'initialize-firebase-admin';
   try {
     const auth = getFirebaseAdminAuth();
+    stage = 'verify-id-token';
     const decodedToken = await auth.verifyIdToken(idToken, true);
+    stage = 'load-user';
     const user = await auth.getUser(decodedToken.uid);
     if (user.disabled) return getFailureRedirect('disabled');
 
+    stage = 'load-membership-profile';
     const memberProfile = await getFirebaseAdminFirestore()
       .collection('users')
       .doc(decodedToken.uid)
@@ -48,6 +71,7 @@ export async function POST(request: NextRequest) {
       return getFailureRedirect('not-authorized');
     }
 
+    stage = 'create-session-cookie';
     const sessionCookie = await auth.createSessionCookie(idToken, {
       expiresIn: SESSION_MAX_AGE_SECONDS * 1000,
     });
@@ -60,7 +84,11 @@ export async function POST(request: NextRequest) {
       maxAge: SESSION_MAX_AGE_SECONDS,
     });
     return response;
-  } catch {
+  } catch (error) {
+    console.error('Treatment Advisor session handoff failed', {
+      stage,
+      ...getErrorDetails(error),
+    });
     return getFailureRedirect('session');
   }
 }
