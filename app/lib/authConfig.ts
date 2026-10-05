@@ -1,6 +1,7 @@
 export const SESSION_COOKIE_NAME = 'sora_session';
+export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 5;
 
-const MEMBERSHIP_ORIGIN = new URL(
+export const MEMBERSHIP_ORIGIN = new URL(
   process.env.MEMBERSHIP_ORIGIN ?? 'https://skintegrity-membership.vercel.app'
 ).origin;
 
