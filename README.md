@@ -25,3 +25,5 @@ The page verifies the `sora_session` cookie, rechecks revocation, and treats eve
 ## Clinical use and privacy
 
 The app provides educational discussion prompts only; it does not select brands, direct debridement, prescribe compression, or replace clinician judgment and local policy. Urgent concerns pause the selector and prompt assessment. Assessment values are held only in browser memory, are not submitted to a server, and are cleared on reset or page reload. Do not enter patient identifiers.
+
+The app records daily aggregate assessment-start and review-completion counters, plus a broad generated-guidance category, in the Membership Firebase project's `toolUsage` collection. It does not send assessment answers, patient identifiers, names, or case details to this collection. The Membership Admin dashboard reads these aggregates.

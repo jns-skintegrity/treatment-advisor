@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   Activity,
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import { getConsiderations, type Assessment } from './lib/recommendations';
+import { recordToolUsage } from './lib/analytics';
 
 const initialAssessment: Assessment = {
   etiology: '',
@@ -77,6 +78,8 @@ function OptionGroup({
 export default function DressingAdvisor() {
   const [assessment, setAssessment] = useState<Assessment>(initialAssessment);
   const [showResults, setShowResults] = useState(false);
+  const attemptStartedRef = useRef(false);
+  const completionTrackedRef = useRef(false);
   const result = useMemo(() => getConsiderations(assessment), [assessment]);
   const ready =
     Boolean(assessment.etiology) &&
@@ -84,11 +87,32 @@ export default function DressingAdvisor() {
     Boolean(assessment.exudate) &&
     Boolean(assessment.periwound);
 
+  function recordAttemptStart() {
+    if (attemptStartedRef.current) return;
+    attemptStartedRef.current = true;
+    void recordToolUsage('started').catch((error) => {
+      console.error('Could not record Treatment Advisor usage start:', error);
+    });
+  }
+
+  function recordCompletion(
+    category: 'urgent_review' | 'dressing_guidance' | 'clinical_review' | 'no_guidance'
+  ) {
+    if (completionTrackedRef.current) return;
+    completionTrackedRef.current = true;
+    void recordToolUsage('completed', category).catch((error) => {
+      console.error('Could not record Treatment Advisor review completion:', error);
+    });
+  }
+
   function update<K extends keyof Assessment>(key: K, value: Assessment[K]) {
+    recordAttemptStart();
     setAssessment((current) => ({ ...current, [key]: value }));
   }
 
   function toggleUrgentSign(value: string) {
+    recordAttemptStart();
+    const isAddingUrgentSign = !assessment.urgentSigns.includes(value);
     setAssessment((current) => ({
       ...current,
       urgentSigns: current.urgentSigns.includes(value)
@@ -96,11 +120,27 @@ export default function DressingAdvisor() {
         : [...current.urgentSigns, value],
     }));
     setShowResults(true);
+    if (isAddingUrgentSign) recordCompletion('urgent_review');
   }
 
   function resetAssessment() {
     setAssessment(initialAssessment);
     setShowResults(false);
+    attemptStartedRef.current = false;
+    completionTrackedRef.current = false;
+  }
+
+  function reviewConsiderations() {
+    recordAttemptStart();
+    setShowResults(true);
+    const category = result.urgent
+      ? 'urgent_review'
+      : result.dressing.length > 0
+        ? 'dressing_guidance'
+        : result.clinical.length > 0
+          ? 'clinical_review'
+          : 'no_guidance';
+    recordCompletion(category);
   }
 
   const completedCount = [
@@ -258,7 +298,7 @@ export default function DressingAdvisor() {
                 <button
                   className="button button-primary"
                   type="button"
-                  onClick={() => setShowResults(true)}
+                  onClick={reviewConsiderations}
                   disabled={!ready}
                 >
                   Review considerations <span aria-hidden="true">→</span>
@@ -353,7 +393,7 @@ export default function DressingAdvisor() {
 
             <div className="privacy-note">
               <ShieldCheck size={16} />
-              <p><strong>Privacy by design</strong><br />Assessment selections stay in this browser session and are not transmitted or stored.</p>
+              <p><strong>Privacy by design</strong><br />Assessment selections stay in this browser session and are not stored. Only daily usage counts and broad generated-guidance categories are sent for aggregate reporting.</p>
             </div>
           </aside>
         </div>
