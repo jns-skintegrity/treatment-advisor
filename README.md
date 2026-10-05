@@ -20,7 +20,7 @@ Configure these server-side environment variables in the deployment:
 - `FIREBASE_SERVICE_ACCOUNT_JSON`: service-account JSON for the `skintegrity-membership` Firebase project. Keep it server-only and never commit it.
 - `MEMBERSHIP_ORIGIN`: the exact origin for the membership site; defaults to `https://skintegrity-membership.vercel.app`.
 
-The page verifies the `sora_session` cookie, rechecks revocation, and requires a verified `@skintegritypartners.com` email plus an eligible membership badge in the `users/{uid}` Firestore profile. The membership sign-in flow posts the Firebase ID token to `/api/auth/session`; this route verifies eligibility and sets the HTTP-only `sora_session` cookie for this app's origin.
+The page verifies the `sora_session` cookie, rechecks revocation, and treats every verified `@skintegritypartners.com` account as an admin; a Firestore membership badge is not required. The membership sign-in flow posts the Firebase ID token to `/api/auth/session`; this route verifies the company email and sets the HTTP-only `sora_session` cookie for this app's origin.
 
 ## Clinical use and privacy
 

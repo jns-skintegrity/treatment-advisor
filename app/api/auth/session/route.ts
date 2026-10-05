@@ -6,8 +6,8 @@ import {
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_SECONDS,
 } from '../../../lib/authConfig';
-import { isClinicalAccessAllowed } from '../../../lib/clinicalAccess';
-import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '../../../lib/firebaseAdmin';
+import { isCompanyAdmin } from '../../../lib/clinicalAccess';
+import { getFirebaseAdminAuth } from '../../../lib/firebaseAdmin';
 
 export const runtime = 'nodejs';
 
@@ -15,7 +15,6 @@ type HandoffStage =
   | 'initialize-firebase-admin'
   | 'verify-id-token'
   | 'load-user'
-  | 'load-membership-profile'
   | 'create-session-cookie';
 
 function getErrorDetails(error: unknown) {
@@ -61,13 +60,8 @@ export async function POST(request: NextRequest) {
     const user = await auth.getUser(decodedToken.uid);
     if (user.disabled) return getFailureRedirect('disabled');
 
-    stage = 'load-membership-profile';
-    const memberProfile = await getFirebaseAdminFirestore()
-      .collection('users')
-      .doc(decodedToken.uid)
-      .get();
-    if (!memberProfile.exists) return getFailureRedirect('not-member');
-    if (!isClinicalAccessAllowed(user.email, user.emailVerified, memberProfile.data() ?? {})) {
+    const isAdmin = isCompanyAdmin(user.email, user.emailVerified);
+    if (!isAdmin) {
       return getFailureRedirect('not-authorized');
     }
 

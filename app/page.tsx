@@ -3,9 +3,9 @@ import { redirect } from 'next/navigation';
 import type { DecodedIdToken } from 'firebase-admin/auth';
 
 import DressingAdvisor from './DressingAdvisor';
-import { isClinicalAccessAllowed } from './lib/clinicalAccess';
+import { isCompanyAdmin } from './lib/clinicalAccess';
 import { getMembershipLoginUrl, SESSION_COOKIE_NAME } from './lib/authConfig';
-import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from './lib/firebaseAdmin';
+import { getFirebaseAdminAuth } from './lib/firebaseAdmin';
 
 const INVALID_SESSION_CODES = new Set([
   'auth/argument-error',
@@ -37,19 +37,7 @@ export default async function Home() {
     redirect(loginUrl.toString());
   }
 
-  const memberProfile = await getFirebaseAdminFirestore()
-    .collection('users')
-    .doc(decodedSession.uid)
-    .get();
-
-  if (
-    !memberProfile.exists ||
-    !isClinicalAccessAllowed(
-      decodedSession.email,
-      decodedSession.email_verified,
-      memberProfile.data() ?? {}
-    )
-  ) {
+  if (!isCompanyAdmin(decodedSession.email, decodedSession.email_verified)) {
     const loginUrl = getMembershipLoginUrl();
     loginUrl.searchParams.set('authError', 'not-authorized');
     redirect(loginUrl.toString());
