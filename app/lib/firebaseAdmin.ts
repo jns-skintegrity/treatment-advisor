@@ -3,6 +3,21 @@ import type { ServiceAccount } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
+function parseServiceAccount(serviceAccountJson: string): unknown {
+  try {
+    return JSON.parse(serviceAccountJson);
+  } catch (error) {
+    const repairedJson = serviceAccountJson.replace(
+      /("private_key"\s*:\s*")((?:\\.|[^"\\])*)(")/,
+      (_match, prefix: string, privateKey: string, suffix: string) =>
+        `${prefix}${privateKey.replace(/\r\n?|\n/g, '\\n')}${suffix}`
+    );
+
+    if (repairedJson === serviceAccountJson) throw error;
+    return JSON.parse(repairedJson);
+  }
+}
+
 function getFirebaseAdminApp() {
   const appName = 'skintegrity-membership-admin';
   const existingApp = getApps().find((app) => app.name === appName);
@@ -13,7 +28,7 @@ function getFirebaseAdminApp() {
     throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is not configured.');
   }
 
-  const serviceAccountData: unknown = JSON.parse(serviceAccountJson);
+  const serviceAccountData = parseServiceAccount(serviceAccountJson);
   if (
     typeof serviceAccountData !== 'object' ||
     serviceAccountData === null ||
