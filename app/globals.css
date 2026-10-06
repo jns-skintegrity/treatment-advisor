@@ -811,6 +811,130 @@ h1 {
   background: #f8fbf9;
 }
 
+.support-card {
+  margin-top: 13px;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+}
+
+.support-card-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.support-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--green-pale);
+  color: var(--green);
+}
+
+.support-card h2 {
+  margin: 3px 0 0;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.support-card > p {
+  margin: 11px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.support-toggle {
+  width: 100%;
+  justify-content: center;
+}
+
+.support-form-panel {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.support-warning {
+  padding: 10px 11px;
+  border: 1px solid #ead8b8;
+  border-radius: 8px;
+  background: var(--amber-bg);
+  color: #624b2b;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.support-form {
+  display: grid;
+  gap: 7px;
+}
+
+.support-form label {
+  margin-top: 4px;
+  color: #40584f;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.support-form input,
+.support-form select,
+.support-form textarea {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #cfdcd5;
+  border-radius: 7px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+
+.support-form textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.support-form input:focus-visible,
+.support-form select:focus-visible,
+.support-form textarea:focus-visible {
+  outline: 3px solid #70bca1;
+  outline-offset: 2px;
+}
+
+.support-form .button {
+  justify-content: center;
+}
+
+.support-status {
+  min-height: 18px;
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.support-failure {
+  color: var(--red);
+}
+
+.support-success {
+  padding-top: 4px;
+}
+
+.support-success strong {
+  color: var(--green-dark);
+  font-size: 13px;
+}
+
+.support-success p {
+  margin: 4px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .privacy-note svg {
   flex: 0 0 auto;
   margin-top: 1px;

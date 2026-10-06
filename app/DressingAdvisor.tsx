@@ -14,6 +14,7 @@ import {
 
 import { getConsiderations, type Assessment } from './lib/recommendations';
 import { recordToolUsage } from './lib/analytics';
+import SupportInquiry from './SupportInquiry';
 
 const initialAssessment: Assessment = {
   etiology: '',
@@ -393,8 +394,9 @@ export default function DressingAdvisor() {
 
             <div className="privacy-note">
               <ShieldCheck size={16} />
-              <p><strong>Privacy by design</strong><br />Assessment selections stay in this browser session and are not stored. Only daily usage counts and broad generated-guidance categories are sent for aggregate reporting.</p>
+              <p><strong>Privacy by design</strong><br />Assessment selections stay in this browser session and are not stored. Only daily usage counts and broad generated-guidance categories are sent for aggregate reporting. Support inquiries are submitted separately; do not include patient identifiers or PHI.</p>
             </div>
+            <SupportInquiry />
           </aside>
         </div>
 
