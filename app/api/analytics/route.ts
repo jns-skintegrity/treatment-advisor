@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
 import { SESSION_COOKIE_NAME } from '../../lib/authConfig';
 import { isCompanyAdmin } from '../../lib/clinicalAccess';
@@ -8,12 +8,29 @@ import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '../../lib/fireb
 export const runtime = 'nodejs';
 
 const VALID_EVENTS = new Set(['started', 'completed']);
-const VALID_CATEGORIES = new Set([
+const GUIDANCE_CATEGORIES = [
   'urgent_review',
   'dressing_guidance',
   'clinical_review',
   'no_guidance',
-]);
+] as const;
+const VALID_CATEGORIES = new Set<string>(GUIDANCE_CATEGORIES);
+
+type GuidanceCategory = (typeof GUIDANCE_CATEGORIES)[number];
+type TreatmentAdvisorUse = {
+  completedAt: Timestamp;
+  category: GuidanceCategory;
+};
+
+function isGuidanceCategory(value: unknown): value is GuidanceCategory {
+  return typeof value === 'string' && VALID_CATEGORIES.has(value);
+}
+
+function isTreatmentAdvisorUse(value: unknown): value is TreatmentAdvisorUse {
+  if (typeof value !== 'object' || value === null) return false;
+  const use = value as Record<string, unknown>;
+  return use.completedAt instanceof Timestamp && isGuidanceCategory(use.category);
+}
 
 export async function POST(request: NextRequest) {
   const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -47,8 +64,7 @@ export async function POST(request: NextRequest) {
   if (
     typeof event !== 'string' ||
     !VALID_EVENTS.has(event) ||
-    (category !== undefined &&
-      (typeof category !== 'string' || !VALID_CATEGORIES.has(category))) ||
+    (category !== undefined && !isGuidanceCategory(category)) ||
     (event === 'started' && category !== undefined) ||
     (event === 'completed' && category === undefined)
   ) {
@@ -71,7 +87,35 @@ export async function POST(request: NextRequest) {
     };
     if (category) update[`categories.${category}`] = FieldValue.increment(1);
 
-    await getFirebaseAdminFirestore().collection('toolUsage').doc(documentId).set(update, { merge: true });
+    const db = getFirebaseAdminFirestore();
+    const aggregateRef = db.collection('toolUsage').doc(documentId);
+    if (event === 'completed') {
+      const historyRef = db
+        .collection('users')
+        .doc(decodedSession.uid)
+        .collection('toolHistory')
+        .doc('treatment-advisor');
+
+      await db.runTransaction(async (transaction) => {
+        const historySnapshot = await transaction.get(historyRef);
+        const savedUses: unknown = historySnapshot.get('uses');
+        const previousUses = Array.isArray(savedUses)
+          ? savedUses.filter(isTreatmentAdvisorUse)
+          : [];
+        const completedAt = Timestamp.now();
+        const uses = [
+          { completedAt, category: category as GuidanceCategory },
+          ...previousUses,
+        ]
+          .sort((first, second) => second.completedAt.toMillis() - first.completedAt.toMillis())
+          .slice(0, 5);
+
+        transaction.set(historyRef, { uses });
+        transaction.set(aggregateRef, update, { merge: true });
+      });
+    } else {
+      await aggregateRef.set(update, { merge: true });
+    }
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('Could not record Treatment Advisor usage event', error);
