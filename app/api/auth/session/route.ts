@@ -83,6 +83,6 @@ export async function POST(request: NextRequest) {
       stage,
       ...getErrorDetails(error),
     });
-    return getFailureRedirect(`session-${stage}`);
+    return getFailureRedirect('session');
   }
 }
